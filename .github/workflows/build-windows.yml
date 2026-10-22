@@ -3,7 +3,7 @@ name: Build Windows executable
 on:
   push:
     branches:
-      - main
+      - '**'
   release:
     types:
       - published
@@ -33,7 +33,7 @@ jobs:
           $dist = Join-Path $PWD "dist"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           Copy-Item -Path "publish\*" -Destination $dist -Recurse -Force
-          $archive = "VantaraMCUTool-$env:GITHUB_REF_NAME-win-x64.zip"
+          $archive = "VantaraMCUTool-$($env:GITHUB_REF_NAME)-win-x64.zip"
           Compress-Archive -Path "publish\*" -DestinationPath (Join-Path $dist $archive) -CompressionLevel Optimal
 
       - name: Upload build artifact
