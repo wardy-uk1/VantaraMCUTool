@@ -1,0 +1,52 @@
+# Build output
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+Debug/
+Release/
+artifacts/
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Backups and temporary files
+*.bak
+*.backup
+*.backup-*
+*.before-*
+*.pre-*
+*.failed-*
+*~
+*.tmp
+
+# Logs and local diagnostics
+*.log
+logs/
+*-diagnostic.txt
+overview-grid-diagnostic.txt
+-Pattern
+
+# Firmware payloads and generated binary artifacts
+*.bin
+*.hex
+*.elf
+*.dfu
+*.uf2
+*.rom
+*.fw
+*.firmware
+*.pdb
+
+# Local machine/device-specific data
+*.local.*
+*.device.*
+serial*.txt
+device-info*.txt
+device-info*.json
