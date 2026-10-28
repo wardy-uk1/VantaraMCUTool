@@ -46,7 +46,7 @@ public partial class MainWindow : Window
 
     private bool TryGetAcPowerStatus(out string status)
     {
-        status = "Unknown — power status could not be read";
+        status = "Unknown â€” power status could not be read";
 
         try
         {
@@ -314,7 +314,7 @@ public partial class MainWindow : Window
                 "Matching Windows device entries:" +
                 Environment.NewLine + output +
                 Environment.NewLine +
-                "Detection only â€” MCU firmware has NOT been queried.";
+                "Detection only Ã¢â‚¬â€ MCU firmware has NOT been queried.";
 
             bool mainDeviceFound = output.Contains(
                 "EntryType    : Main ASUS USB composite device");
@@ -440,7 +440,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             McuVersionValue.Text = "Not queried";
-            McuStatusValue.Text = "Read failed â€” see log";
+            McuStatusValue.Text = "Read failed Ã¢â‚¬â€ see log";
             WriteLog("MCU version read failed: " +
                 ex.GetType().Name + ": " + ex.Message);
 
@@ -511,11 +511,11 @@ public partial class MainWindow : Window
                 selectedFirmwareVersion = expectedVersion;
                 selectedFirmwareHash = hash;
 
-                result = $"LOCAL REFERENCE MATCH — {expectedVersion}";
+                result = $"LOCAL REFERENCE MATCH â€” {expectedVersion}";
             }
             else
             {
-                result = "UNVERIFIED — do not treat this file as a verified package";
+                result = "UNVERIFIED â€” do not treat this file as a verified package";
             }
 
             FirmwareDetails.Text =
@@ -544,6 +544,140 @@ public partial class MainWindow : Window
         }
     }
 
+    private void RunPreFlashAssessment_Click(object sender, RoutedEventArgs e)
+    {
+        var findings = new List<string>();
+        bool blocked = false;
+
+        void Block(string message)
+        {
+            findings.Add("BLOCKED: " + message);
+            blocked = true;
+        }
+
+        void Pass(string message)
+        {
+            findings.Add("PASS: " + message);
+        }
+
+        // Recheck AC power at assessment time.
+        bool acConnected = TryGetAcPowerStatus(out string powerStatus);
+        WriteLog("Pre-flash assessment power check: " + powerStatus);
+
+        if (!acConnected)
+            Block("AC power is not positively confirmed. " + powerStatus);
+        else
+            Pass(powerStatus);
+
+        // Independently validate the selected firmware against known local references.
+        if (string.IsNullOrWhiteSpace(selectedFirmwarePath))
+        {
+            Block("No firmware file is selected. Inspect a reference-matched V334 or V335 file first.");
+        }
+        else
+        {
+            try
+            {
+                string fullPath = Path.GetFullPath(selectedFirmwarePath);
+                var info = new FileInfo(fullPath);
+
+                if (!info.Exists)
+                {
+                    Block("The selected firmware file no longer exists.");
+                }
+                else
+                {
+                    string fileName = info.Name;
+                    string expectedVersion = "";
+                    string expectedHash = "";
+
+                    if (fileName.Equals("FGA80101.RC73YA.334.bin",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        expectedVersion = "V334";
+                        expectedHash = "3CC7704B58BB559E531194D5D66393105C2AD80DFB9AD95544C8F606C5ECB63C";
+                    }
+                    else if (fileName.Equals("FGA80101.RC73YA.335.bin",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        expectedVersion = "V335";
+                        expectedHash = "BE73A72F773D9CE13DDD9994FE441555282A215661C8AA0E78B60BB2AF872C85";
+                    }
+
+                    if (string.IsNullOrEmpty(expectedVersion))
+                    {
+                        Block("Filename does not match a known V334/V335 local reference.");
+                    }
+                    else if (info.Length != 262144)
+                    {
+                        Block($"The {expectedVersion} file size is {info.Length} bytes; expected 262144.");
+                    }
+                    else
+                    {
+                        string currentHash;
+                        using (var stream = File.OpenRead(fullPath))
+                        using (var sha = SHA256.Create())
+                        {
+                            currentHash = Convert.ToHexString(sha.ComputeHash(stream));
+                        }
+
+                        if (!currentHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Block($"SHA-256 does not match the known local {expectedVersion} reference.");
+                        }
+                        else
+                        {
+                            Pass($"Exact filename, size, and SHA-256 match the local {expectedVersion} reference.");
+                            if (!string.Equals(selectedFirmwareVersion, expectedVersion,
+                                StringComparison.OrdinalIgnoreCase))
+                            {
+                                Block("The selected inspection state does not agree with the independently verified filename.");
+                            }
+                            else
+                            {
+                                Pass("Selected inspection version agrees with the independently verified file.");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Block("Could not independently revalidate the selected file: " + ex.Message);
+            }
+        }
+
+        // The MCU must have been queried successfully during this app session.
+        bool mcuReadSucceeded =
+            McuStatusValue.Text == "Read directly from ASUS MCU interface" &&
+            !string.IsNullOrWhiteSpace(McuVersionValue.Text) &&
+            McuVersionValue.Text != "Not queried";
+
+        if (!mcuReadSucceeded)
+            Block("A successful direct MCU version read is not currently confirmed.");
+        else
+            Pass("MCU version read in this session: " + McuVersionValue.Text);
+
+        // These remain mandatory blockers until independently resolved.
+        Block("Independent firmware authenticity and exact device/firmware compatibility have not been established.");
+        Block("The native firmware-writing interface has not been enabled or validated for use.");
+
+        string result =
+            "PRE-FLASH ASSESSMENT" + Environment.NewLine +
+            "=====================" + Environment.NewLine +
+            string.Join(Environment.NewLine, findings) +
+            Environment.NewLine + Environment.NewLine +
+            (blocked
+                ? "RESULT: FLASHING BLOCKED. Do not attempt a firmware write."
+                : "Assessment checks passed; this does not authorize flashing.") +
+            Environment.NewLine +
+            "No firmware write, reset, or ROM-switch command was called.";
+
+        PreFlashAssessmentDetails.Text = result;
+        WriteLog("Pre-flash assessment completed: " +
+            (blocked ? "BLOCKED" : "checks passed"));
+        WriteLog("Assessment is diagnostic only; no native write API was called.");
+    }
     private void OpenLog_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -650,6 +784,9 @@ internal static class AsusMcuNative
     internal static extern void GetFirmwareVersion(
         byte[] buffer);
 }
+
+
+
 
 
 

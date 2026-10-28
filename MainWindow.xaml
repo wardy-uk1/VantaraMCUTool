@@ -364,16 +364,45 @@
                                     Click="InspectFirmware_Click"
                                     HorizontalAlignment="Left"/>
 
+                            <TextBlock Text="Pre-flash assessment"
+                                       FontWeight="SemiBold"
+                                       Margin="0,12,0,4"/>
+
+                            <TextBox x:Name="AssessmentDetails"
+                                     Text="Assessment has not been run."
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="76"
+                                     MaxHeight="180"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Background="{DynamicResource InsetBackground}"
+                                     Foreground="{DynamicResource LogForeground}"
+                                     BorderThickness="0"
+                                     Padding="10"/>
+
+                            <Button Content="Run pre-flash assessment"
+                                    Click="RunPreFlashAssessment_Click"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,8,0,0"/>
+
                             <Button Content="Flash MCU"
                                     IsEnabled="False"
-                                    ToolTip="Unavailable until the flashing routine is connected."
+                                    ToolTip="Disabled: firmware writing is not connected or authorized."
                                     HorizontalAlignment="Left"
                                     Margin="0,8,0,0"/>
 
                             <TextBlock Text="Flashing is not connected yet."
                                        Foreground="{DynamicResource Warning}"
                                        Margin="0,4,0,0"/>
-<TextBlock x:Name="FirmwareDetails"
+<TextBlock Text="Pre-flash Assessment"
+                                       FontWeight="SemiBold"
+                                       Margin="0,12,0,4"/>
+                            <TextBlock x:Name="PreFlashAssessmentDetails"
+                                       Text="Assessment not run."
+                                       Margin="0,4,0,0"
+                                       LineHeight="22"
+                                       TextWrapping="Wrap"/><TextBlock x:Name="FirmwareDetails"
                                        Text="No firmware file selected."
                                        Margin="0,8,0,0"
                                        LineHeight="22"/>
@@ -431,5 +460,8 @@
         </DockPanel>
     </Grid>
 </Window>
+
+
+
 
 
